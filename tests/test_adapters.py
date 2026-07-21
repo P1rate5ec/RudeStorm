@@ -8,6 +8,7 @@ from rudestorm.adapters import (
     CSIPresenceAdapter,
     RemoteIDAdapter,
     RemoteIDParseError,
+    ReplayedRemoteIDAdapter,
 )
 from rudestorm.adapters.acoustic import AcousticSample
 from rudestorm.config import RemoteIDConfig
@@ -37,6 +38,56 @@ def test_remote_id_rejects_garbage():
     adapter = RemoteIDAdapter("mote-rf-1")
     with pytest.raises(RemoteIDParseError):
         adapter.process(b"not a valid frame")
+
+
+def test_replayed_remote_id_uses_production_geofence_without_operator_location():
+    cfg = RemoteIDConfig(aoi_center_lat=44.6488, aoi_center_lon=-63.5752,
+                         aoi_radius_m=3000.0)
+    adapter = ReplayedRemoteIDAdapter("mote-rf-1", cfg)
+    det = adapter.process({
+        "timestamp": 0.0,
+        "serial": "SYNTH-001",
+        "lat": 44.6490,
+        "lon": -63.5750,
+        "alt_m": 50.0,
+        "speed_mps": 8.0,
+    })
+    assert det is not None
+    assert det.attributes["operator_location"] is None
+    assert det.attributes["serial"] == "SYNTH-001"
+    assert det.attributes["range_to_aoi_center_m"] < 3000.0
+
+
+def test_replayed_remote_id_outside_aoi_is_suppressed():
+    adapter = ReplayedRemoteIDAdapter("mote-rf-1", RemoteIDConfig())
+    assert adapter.process({
+        "timestamp": 0.0,
+        "serial": "SYNTH-PORTLAND",
+        "lat": 45.5393092,
+        "lon": -122.9662894,
+    }) is None
+
+
+def test_remote_id_rejects_non_finite_input():
+    adapter = ReplayedRemoteIDAdapter("mote-rf-1", RemoteIDConfig())
+    with pytest.raises(RemoteIDParseError):
+        adapter.process({
+            "timestamp": 0.0,
+            "serial": "SYNTH-NAN",
+            "lat": float("nan"),
+            "lon": -63.5752,
+        })
+
+
+def test_replayed_remote_id_wraps_timestamp_overflow():
+    adapter = ReplayedRemoteIDAdapter("mote-rf-1", RemoteIDConfig())
+    with pytest.raises(RemoteIDParseError):
+        adapter.process({
+            "timestamp": 1e18,
+            "serial": "SYNTH-OVERFLOW",
+            "lat": 44.6488,
+            "lon": -63.5752,
+        })
 
 
 def test_csi_static_scene_no_presence():

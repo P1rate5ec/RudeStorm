@@ -8,12 +8,17 @@ and nothing else — correlation across modalities is the fusion engine's job.
 from rudestorm.adapters.acoustic import AcousticAdapter
 from rudestorm.adapters.base import SensorAdapter
 from rudestorm.adapters.csi_presence import CSIPresenceAdapter
-from rudestorm.adapters.remote_id import RemoteIDAdapter, RemoteIDParseError
+from rudestorm.adapters.remote_id import (
+    RemoteIDAdapter,
+    RemoteIDParseError,
+    ReplayedRemoteIDAdapter,
+)
 
 __all__ = [
     "SensorAdapter",
     "CSIPresenceAdapter",
     "RemoteIDAdapter",
+    "ReplayedRemoteIDAdapter",
     "RemoteIDParseError",
     "AcousticAdapter",
 ]

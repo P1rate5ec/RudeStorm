@@ -45,3 +45,9 @@ def test_perimeter_intrusion_scenario_alerts():
         events.extend(p.ingest(s.modality, s.source_id, s.payload))
     assert len(events) >= 1
     assert events[0].threat_class == "presence_intrusion"
+
+
+def test_default_pipeline_does_not_create_cwd_audit_log(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Pipeline()
+    assert not (tmp_path / "rudestorm_audit.log").exists()

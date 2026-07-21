@@ -8,6 +8,7 @@ raw sensor input -> `Detection` (per-modality, low confidence) -> `ThreatEvent`
 from __future__ import annotations
 
 import json
+import math
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -38,6 +39,14 @@ class GeoPoint:
     lon: float
     alt_m: Optional[float] = None
 
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.lat) or not -90.0 <= self.lat <= 90.0:
+            raise ValueError(f"lat must be finite and in [-90,90], got {self.lat}")
+        if not math.isfinite(self.lon) or not -180.0 <= self.lon <= 180.0:
+            raise ValueError(f"lon must be finite and in [-180,180], got {self.lon}")
+        if self.alt_m is not None and not math.isfinite(self.alt_m):
+            raise ValueError(f"alt_m must be finite, got {self.alt_m}")
+
     def as_tuple(self) -> Tuple[float, float]:
         return (self.lat, self.lon)
 
@@ -65,7 +74,7 @@ class Detection:
     attributes: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.confidence <= 1.0:
+        if not math.isfinite(self.confidence) or not 0.0 <= self.confidence <= 1.0:
             raise ValueError(f"confidence must be in [0,1], got {self.confidence}")
         if self.timestamp.tzinfo is None:
             self.timestamp = self.timestamp.replace(tzinfo=timezone.utc)
@@ -100,6 +109,14 @@ class ThreatEvent:
     taxonomy: List[str] = field(default_factory=list)
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     provenance_hash: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.confidence) or not 0.0 <= self.confidence <= 1.0:
+            raise ValueError(f"confidence must be in [0,1], got {self.confidence}")
+        if self.window_seconds <= 0 or not math.isfinite(self.window_seconds):
+            raise ValueError("window_seconds must be finite and positive")
+        if self.timestamp.tzinfo is None:
+            self.timestamp = self.timestamp.replace(tzinfo=timezone.utc)
 
     @property
     def modalities(self) -> List[Modality]:

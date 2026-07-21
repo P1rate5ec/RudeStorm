@@ -54,6 +54,25 @@ def test_detections_outside_window_do_not_correlate():
     assert events == []
 
 
+def test_out_of_order_detection_cannot_expand_window():
+    engine = FusionEngine(FusionConfig(window_seconds=2, min_modalities=2))
+    t0 = datetime.now(timezone.utc)
+    engine.add(_det(Modality.REMOTE_ID, t0 + timedelta(seconds=10), conf=0.9,
+                    location=GeoPoint(44.6488, -63.5752)))
+    events = engine.add(_det(Modality.ACOUSTIC, t0 + timedelta(seconds=1), conf=0.9))
+    assert events == []
+    assert engine.window_size == 1
+
+
+def test_audio_and_video_can_confirm_unidentified_drone():
+    engine = FusionEngine(FusionConfig(window_seconds=2, min_modalities=2))
+    t0 = datetime.now(timezone.utc)
+    engine.add(_det(Modality.ACOUSTIC, t0, conf=0.8))
+    events = engine.add(_det(Modality.VIDEO, t0 + timedelta(seconds=1), conf=0.8))
+    assert len(events) == 1
+    assert events[0].threat_class == "uas_audio_visual_confirmed"
+
+
 def test_noisy_or_rewards_corroboration():
     assert noisy_or([0.5]) == pytest.approx(0.5)
     assert noisy_or([0.5, 0.5]) == pytest.approx(0.75)

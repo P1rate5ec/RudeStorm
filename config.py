@@ -7,7 +7,7 @@ offline on edge hardware with zero network calls at import time.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 
 
 @dataclass
@@ -54,7 +54,9 @@ class FusionConfig:
 class GovernanceConfig:
     """Privacy / provenance parameters."""
 
-    audit_log_path: str = "rudestorm_audit.log"
+    # File persistence is opt-in. Edge deployments must choose an explicit,
+    # writable, access-controlled path rather than inheriting the process cwd.
+    audit_log_path: Optional[str] = None
     redact_video: bool = True
     operator_node_id: str = "ops-node-1"
 

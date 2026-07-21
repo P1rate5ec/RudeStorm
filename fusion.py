@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Callable, Deque, List, Optional, Protocol, Sequence, Set
+from typing import Deque, List, Optional, Protocol, Sequence, Set
 
 from rudestorm.config import FusionConfig
 from rudestorm.events import (
@@ -76,6 +76,12 @@ def default_profiles() -> List[CorrelationProfile]:
             geolocate_from=Modality.REMOTE_ID,
         ),
         CorrelationProfile(
+            name="uas_audio_visual_confirmed",
+            threat_class="uas_audio_visual_confirmed",
+            required={Modality.ACOUSTIC, Modality.VIDEO},
+            taxonomy=["counter-uas", "audio-visual-confirmed"],
+        ),
+        CorrelationProfile(
             name="perimeter_intrusion",
             threat_class="presence_intrusion",
             required={Modality.WIFI_CSI, Modality.ACOUSTIC},
@@ -116,17 +122,26 @@ class FusionEngine:
         self.profiles = profiles if profiles is not None else default_profiles()
         self.scorer = scorer  # if set, replaces noisy_or with a learned model
         self._window: Deque[Detection] = deque()
+        self._latest_ts = None
 
     def add(self, detection: Detection) -> List[ThreatEvent]:
         """Add a detection and return any threat events it corroborates into."""
         self._window.append(detection)
-        self._evict(detection)
+        if self._latest_ts is None or detection.timestamp > self._latest_ts:
+            self._latest_ts = detection.timestamp
+        self._evict()
         return self._evaluate()
 
-    def _evict(self, latest: Detection) -> None:
-        horizon = latest.timestamp - timedelta(seconds=self.config.window_seconds)
-        while self._window and self._window[0].timestamp < horizon:
-            self._window.popleft()
+    def _evict(self) -> None:
+        """Keep only detections inside the window relative to max event time.
+
+        MQTT/NATS and multi-sensor queues can deliver packets out of order. Using
+        the just-arrived packet as the horizon lets stale packets expand the
+        window and corroborate unrelated events. The maximum timestamp seen is
+        monotonic, and filtering the full deque handles stale entries anywhere.
+        """
+        horizon = self._latest_ts - timedelta(seconds=self.config.window_seconds)
+        self._window = deque(d for d in self._window if d.timestamp >= horizon)
 
     def _evaluate(self) -> List[ThreatEvent]:
         present = {d.modality for d in self._window}

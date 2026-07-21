@@ -16,11 +16,16 @@ Three passive modalities in, one corroborated event stream out:
 
 | Layer | Modality | Role | Honest limit |
 |---|---|---|---|
-| AIR | Passive **Remote ID / DroneID** (ESP32-S3, WiFi/BLE) | Locates drone **and operator** | Cooperative broadcasters only; encrypted/dark drones are out of scope (radar-class) |
+| AIR | Passive **Remote ID / DroneID** (ESP32-S3, WiFi/BLE) | Locates the drone and, when broadcast, the operator | Cooperative broadcasters only; encrypted/dark drones are out of scope (radar-class) |
 | GROUND | **WiFi-CSI** presence | Coarse presence / gross motion | No identity, pose, count, or vitals — ever |
 | CORROBORATION | **Acoustic** spectrogram | Supporting vote | 8–15% urban FP rate → never alerts alone |
 
 The value is the **fusion**, not any single sensor.
+
+After an event is confirmed, `identity.resolve_identity` labels it as an
+`IDENTIFIED_TRACK`, `UNIDENTIFIED_DRONE`, or `IDENTITY_UNAVAILABLE`. Receiver
+failure is kept separate from a genuinely silent aircraft, so missing telemetry
+cannot be promoted into threat evidence.
 
 ## The one rule that matters
 

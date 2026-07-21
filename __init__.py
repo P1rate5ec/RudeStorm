@@ -17,6 +17,13 @@ Design rules that shape this package:
 
 from rudestorm.events import Detection, Modality, ThreatEvent
 from rudestorm.fusion import CorrelationProfile, FusionEngine
+from rudestorm.identity import (
+    IDENTIFIED_TRACK,
+    IDENTITY_UNAVAILABLE,
+    UNIDENTIFIED_DRONE,
+    IdentityResult,
+    resolve_identity,
+)
 from rudestorm.learning import (
     ConfidenceCalibrator,
     CSIBaselineModel,
@@ -38,4 +45,9 @@ __all__ = [
     "ConfidenceCalibrator",
     "CSIBaselineModel",
     "OperatorFeedback",
+    "IdentityResult",
+    "resolve_identity",
+    "IDENTIFIED_TRACK",
+    "UNIDENTIFIED_DRONE",
+    "IDENTITY_UNAVAILABLE",
 ]
