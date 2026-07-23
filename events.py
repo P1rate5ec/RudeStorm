@@ -18,17 +18,56 @@ from typing import Any, Dict, List, Optional, Tuple
 
 class Modality(str, Enum):
     """Independent sensing modalities. Two DISTINCT modalities are required to
-    satisfy the challenge's heterogeneous-source essential outcome."""
+    satisfy the challenge's heterogeneous-source essential outcome.
 
+    The PHYSICAL group observes the world (presence, aircraft, sound). The RF
+    group observes the radio environment itself (who is emitting, who is
+    *sensing*, and whether our own CSI feed is being tampered with). Fusing one
+    of each is what makes an alert defensible: a packet-layer signature alone is
+    forgeable, and a presence blip alone is a cat.
+    """
+
+    # --- physical world ---
     WIFI_CSI = "wifi_csi"          # coarse presence / gross motion (no identity)
     REMOTE_ID = "remote_id"        # passive ASTM F3411 / DJI DroneID broadcast
     ACOUSTIC = "acoustic"          # edge spectrogram classifier (corroboration only)
     VIDEO = "video"               # edge-redacted CCTV small-object confirmation
     VIBRATION = "vibration"        # structural / perimeter accelerometer
 
+    # --- radio environment (cyber) ---
+    RF_EMITTER = "rf_emitter"      # unauthorized 802.11 / BLE / cellular emitter
+    SENSING_SESSION = "sensing_session"  # 802.11bf / CSI-solicitation observed
+    CSI_INTEGRITY = "csi_integrity"      # injection, replay or poisoning of our CSI
+    NET_TELEMETRY = "net_telemetry"      # wired/host signal (badge, DHCP, EDR, NAC)
+
+
+#: Modalities that observe the radio environment rather than the physical world.
+RF_MODALITIES = frozenset({
+    Modality.RF_EMITTER,
+    Modality.SENSING_SESSION,
+    Modality.CSI_INTEGRITY,
+})
+
+#: Modalities that observe physical space.
+PHYSICAL_MODALITIES = frozenset({
+    Modality.WIFI_CSI,
+    Modality.REMOTE_ID,
+    Modality.ACOUSTIC,
+    Modality.VIDEO,
+    Modality.VIBRATION,
+})
 
 # Modalities that are only ever allowed to *corroborate*, never to trigger alone.
-CORROBORATION_ONLY = frozenset({Modality.ACOUSTIC, Modality.VIBRATION})
+#
+# ACOUSTIC and VIBRATION are here on signal quality (8-15% urban FP rate).
+# NET_TELEMETRY is here for a different reason: it is attacker-controllable.
+# A host agent or DHCP lease can be forged by the very adversary we are hunting,
+# so it may corroborate a physically-observed event but must never stand one up.
+CORROBORATION_ONLY = frozenset({
+    Modality.ACOUSTIC,
+    Modality.VIBRATION,
+    Modality.NET_TELEMETRY,
+})
 
 
 @dataclass
