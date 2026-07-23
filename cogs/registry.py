@@ -63,6 +63,10 @@ class CogRegistry:
         self._ceiling = privacy_ceiling
         self._cogs: Dict[str, Cog] = {}
         self._results: List[LoadResult] = []
+        #: Every manifest ever offered to this node, loaded or rejected, so the
+        #: UI can categorize and explain a dark capability without re-importing
+        #: the cog class.
+        self._manifests: Dict[str, CogManifest] = {}
 
     # ---------------------------------------------------------------- privacy
 
@@ -99,6 +103,7 @@ class CogRegistry:
     def load(self, cog_cls: Type[Cog], source_id: str, strict: bool = False) -> LoadResult:
         """Attempt to load one cog onto this node."""
         manifest = cog_cls.manifest
+        self._manifests[manifest.cog_id] = manifest
         reason = self._rejection_reason(manifest)
 
         if reason:
@@ -147,6 +152,14 @@ class CogRegistry:
 
     def get(self, cog_id: str) -> Optional[Cog]:
         return self._cogs.get(cog_id)
+
+    def manifest_of(self, cog_id: str) -> Optional[CogManifest]:
+        """The manifest for any offered cog, whether it loaded or was rejected."""
+        return self._manifests.get(cog_id)
+
+    @property
+    def manifests(self) -> Dict[str, CogManifest]:
+        return dict(self._manifests)
 
     @property
     def active(self) -> List[Cog]:
